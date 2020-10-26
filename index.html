@@ -7,6 +7,13 @@
     src="https://code.jquery.com/jquery-2.2.4.min.js"
     integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
     crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/css/theme.blue.min.css" integrity="sha512-jJ9r3lTLaH5XXa9ZOsCQU8kLvxdAVzyTWO/pnzdZrshJQfnw1oevJFpoyCDr7K1lqt1hUgqoxA5e2PctVtlSTg==" crossorigin="anonymous" />
+  <style>
+    #fav-table th {
+      background-color:pink;
+    }
+  </style>
 </head>
 <body>
   <div>
@@ -29,12 +36,30 @@
     <h4>ばつぐん取れそうだけど一致技で弱点突かれるかも？なタイプ</h4>
     <div id="cautionList"></div>
   </div>
+  <div>
+    <h4>相性一覧</h4>
+    <div id="typeList">
+      <table id="typeTable">
+        <thead>
+          <tr>
+            <th>タイプ</th>
+            <th>等倍以上</th>
+            <th>ばつぐん</th>
+            <th>いまひとつ</th>
+            <th>こうかなし</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
   <hr>
   <div id="targetList">
   </div>
   <div id="lock" style="z-index:999;position:absolute;top:0px;left:0px;right:0px;bottom:0px;background-color:pink;opacity:0.3;text-align:center;font-size:xx-large;color:gray;">読み込み中...</div>
   <script>
     $( function() {
+      $('#typeTable').tablesorter({theme: 'blue', sortList: [[1,1]]});
       let typeMst = [
         {
           type: 'ノーマル',
@@ -485,6 +510,61 @@
         $("#lock").hide();
       }
 
+      function addMapCount(map, types, mode){
+        for (let i = 0; i < types.length; i++){
+          if (getTypeInfo(types[i].notType)){
+            continue;
+          }
+          map[types[i]][mode] += 1;
+        }
+      }
+
+      function createPokemonTable(list){
+        if (!list){
+          return 'いないよ';
+        }
+        let table = $('<table>').addClass('pokeTable');
+        let head = $('<tr>');
+        head.append($('<th>').append('ポケモン'));
+        head.append($('<th>').append('タイプ'));
+        head.append($('<th>').append('ばつぐん'));
+        head.append($('<th>').append('いまひとつ'));
+        head.append($('<th>').append('こうかなし'));
+        head.append($('<th>').append('弱点注意'));
+        table.append(head);
+        for (let i = 0; i < list.length; i++){
+          let tr = $('<tr>');
+          tr.append($('<td>').append(list[i].name));
+          tr.append($('<td>').append(list[i].type.join('/')));
+          tr.append($('<td>').append(list[i].weak.join('/')));
+          tr.append($('<td>').append(list[i].regist.join('/')));
+          tr.append($('<td>').append(list[i].noeffect.join('/')));
+          tr.append($('<td>').append(list[i].caution.join('/')));
+          table.append(tr);
+        }
+        return table;
+      }
+
+      function createTypeTable(map, total){
+        if (!map){
+          return;
+        }
+        $('#typeTable tbody').remove();
+        let body = $('<tbody>');
+        let keys = Object.keys(map);
+        for (let i = 0; i < keys.length; i++){
+          let tr = $('<tr>');
+          let n = total - map[keys[i]].regist - map[keys[i]].noeffect;
+          tr.append($('<td>').append(keys[i]));
+          tr.append($('<td>').append(n));
+            tr.append($('<td>').append(map[keys[i]].weak));
+          tr.append($('<td>').append(map[keys[i]].regist));
+          tr.append($('<td>').append(map[keys[i]].noeffect));
+          body.append(tr);
+        }
+        $('#typeTable').append(body);
+      }
+
       $("#start").on("click", function(){
         lock();
         
@@ -496,33 +576,34 @@
         $('#cautionList').empty();
         $('#targetList').empty();
 
-        let table = $('<table>');
-        let head = $('<tr>');
+        let typeCountMapping = {};
+        for (let i = 0; i < typeMst.length; i++){
+          if (typeMst[i].notType){
+            continue;
+          }
+          let obj = {
+            weak: 0,
+            regist: 0,
+            noeffect: 0,
+          };
+          typeCountMapping[typeMst[i].type] = obj;
+        }
+
         let weakList = [];
         let registList = [];
         let cautionList = [];
-        head.append($('<th>').append('ポケモン'));
-        head.append($('<th>').append('タイプ'));
-        head.append($('<th>').append('ばつぐん'));
-        head.append($('<th>').append('いまひとつ'));
-        head.append($('<th>').append('こうかなし'));
-        head.append($('<th>').append('弱点注意'));
-        table.append(head);
+        let pokemonList = [];
         for (let i = 0; i < bossMst.length; i++){
           if (bossMst[i].type.indexOf(targetType) < 0){
             continue;
           }
-          let tr = $('<tr>');
-          tr.append($('<td>').append(bossMst[i].name));
-          tr.append($('<td>').append(bossMst[i].type.join('/')));
-          tr.append($('<td>').append(bossMst[i].weak.join('/')));
-          tr.append($('<td>').append(bossMst[i].regist.join('/')));
-          tr.append($('<td>').append(bossMst[i].noeffect.join('/')));
-          tr.append($('<td>').append(bossMst[i].caution.join('/')));
-          table.append(tr);
+          pokemonList.push(bossMst[i]);
           weakList = weakList.concat(bossMst[i].weak);
+          addMapCount(typeCountMapping, bossMst[i].weak, 'weak');
           registList = registList.concat(bossMst[i].regist);
+          addMapCount(typeCountMapping, bossMst[i].regist, 'regist');
           registList = registList.concat(bossMst[i].noeffect);
+          addMapCount(typeCountMapping, bossMst[i].noeffect, 'noeffect');
           cautionList = cautionList.concat(bossMst[i].caution);
         }
         weakList = uniq(weakList);
@@ -554,7 +635,9 @@
         $('#weakList').append(weakList.join('/'));
         $('#evenList').append(evenList.join('/'));
         $('#cautionList').append(cautionResultList.join('/'));
-        $('#targetList').append(table);
+        $('#targetList').append(createPokemonTable(pokemonList));
+        createTypeTable(typeCountMapping, pokemonList.length);
+        $("#typeTable").trigger("update");
         unlock();
       });
     });
