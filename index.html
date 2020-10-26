@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>アドベンチャー</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <script
+    src="https://code.jquery.com/jquery-2.2.4.min.js"
+    integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+    crossorigin="anonymous"></script>
+</head>
+<body>
+  <div>
+    ボスのタイプからおすすめタイプを検索(信じすぎちゃだめ)
+  </div>
+  <div>
+    <select id="targetType">
+    </select>
+    <input id="start" type="button" value="検索！">
+  </div>
+  <div>
+    <h4>ばつぐんが取れそう(等倍以上)なわざのタイプ</h4>
+    <div id="weakList"></div>
+  </div>
+  <div>
+    <h4>等倍になるわざのタイプ</h4>
+    <div id="evenList"></div>
+  </div>
+  <div>
+    <h4>ばつぐん取れそうだけど一致技で弱点突かれるかも？なタイプ</h4>
+    <div id="cautionList"></div>
+  </div>
+  <hr>
+  <div id="targetList">
+  </div>
+  <div id="lock" style="z-index:999;position:absolute;top:0px;left:0px;right:0px;bottom:0px;background-color:pink;opacity:0.3;text-align:center;font-size:xx-large;color:gray;">読み込み中...</div>
+  <script>
+    $( function() {
+      let typeMst = [
+        {
+          type: 'ノーマル',
+          weak: ['かくとう'],
+          regist: [],
+          noeffect: ['ゴースト'],
+        },
+        {
+          type: 'ほのお',
+          weak: ['みず', 'じめん', 'いわ'],
+          regist: ['ほのお', 'くさ', 'こおり', 'むし', 'はがね', 'フェアリー'],
+          noeffect: [],
+        },
+        {
+          type: 'みず',
+          weak: ['でんき', 'くさ'],
+          regist: ['ほのお', 'みず', 'こおり', 'はがね'],
+          noeffect: [],
+        },
+        {
+          type: 'でんき',
+          weak: ['じめん'],
+          regist: ['でんき', 'ひこう', 'はがね'],
+          noeffect: [],
+        },
+        {
+          type: 'くさ',
+          weak: ['ほのお', 'こおり', 'どく', 'ひこう', 'むし'],
+          regist: ['みず', 'でんき', 'くさ', 'じめん'],
+          noeffect: [],
+        },
+        {
+          type: 'こおり',
+          weak: ['ほのお', 'かくとう', 'いわ'],
+          regist: ['こおり'],
+          noeffect: [],
+        },
+        {
+          type: 'かくとう',
+          weak: ['ひこう', 'エスパー', 'フェアリー'],
+          regist: ['むし', 'いわ', 'あく'],
+          noeffect: [],
+        },
+        {
+          type: 'どく',
+          weak: ['じめん', 'エスパー'],
+          regist: ['くさ', 'かくとう', 'どく', 'むし', 'フェアリー'],
+          noeffect: [],
+        },
+        {
+          type: 'じめん',
+          weak: ['みず', 'くさ', 'こおり'],
+          regist: ['どく', 'いわ'],
+          noeffect: ['でんき'],
+        },
+        {
+          type: 'ひこう',
+          weak: ['でんき', 'こおり', 'いわ'],
+          regist: ['くさ', 'かくとう', 'むし'],
+          noeffect: ['じめん'],
+        },
+        {
+          type: 'エスパー',
+          weak: ['むし', 'ゴースト', 'あく'],
+          regist: ['かくとう', 'エスパー'],
+          noeffect: [],
+        },
+        {
+          type: 'むし',
+          weak: ['ほのお', 'ひこう', 'いわ'],
+          regist: ['くさ', 'かくとう', 'じめん'],
+          noeffect: [],
+        },
+        {
+          type: 'いわ',
+          weak: ['みず', 'くさ', 'かくとう', 'じめん', 'はがね'],
+          regist: ['ノーマル', 'ほのお', 'どく', 'ひこう'],
+          noeffect: [],
+        },
+        {
+          type: 'ゴースト',
+          weak: ['ゴースト', 'あく'],
+          regist: ['どく', 'むし'],
+          noeffect: ['ノーマル', 'かくとう'],
+        },
+        {
+          type: 'ドラゴン',
+          weak: ['こおり', 'ドラゴン', 'フェアリー'],
+          regist: ['ほのお', 'みず', 'でんき', 'くさ'],
+          noeffect: [],
+        },
+        {
+          type: 'あく',
+          weak: ['かくとう', 'むし', 'フェアリー'],
+          regist: ['ゴースト', 'あく'],
+          noeffect: ['エスパー'],
+        },
+        {
+          type: 'はがね',
+          weak: ['ほのお', 'かくとう', 'じめん'],
+          regist: ['ノーマル', 'くさ', 'こおり', 'ひこう', 'エスパー', 'むし', 'いわ', 'ドラゴン', 'はがね', 'フェアリー'],
+          noeffect: ['どく'],
+        },
+        {
+          type: 'フェアリー',
+          weak: ['どく', 'はがね'],
+          regist: ['かくとう', 'むし', 'あく'],
+          noeffect: [],
+        },
+        {
+          type: 'ふゆう',
+          weak: [],
+          regist: [],
+          noeffect: ['じめん'],
+          notType: true,
+        },
+        {
+          type: 'もらいび',
+          weak: [],
+          regist: [],
+          noeffect: ['ほのお'],
+          notType: true,
+        },
+      ];
+
+      let bossMst = [
+        {
+          name: 'フリーザー',
+          type: ['こおり', 'ひこう'],
+        },
+        {
+          name: 'サンダー',
+          type: ['でんき', 'ひこう'],
+        },
+        {
+          name: 'ファイヤー',
+          type: ['ほのお', 'ひこう'],
+        },
+        {
+          name: 'ミュウツー',
+          type: ['エスパー'],
+        },
+        {
+          name: 'ライコウ',
+          type: ['でんき'],
+        },
+        {
+          name: 'エンテイ',
+          type: ['ほのお'],
+        },
+        {
+          name: 'スイクン',
+          type: ['みず'],
+        },
+        {
+          name: 'ルギア',
+          type: ['エスパー', 'ひこう'],
+        },
+        {
+          name: 'ホウオウ',
+          type: ['ほのお', 'ひこう'],
+        },
+        {
+          name: 'ラティアス',
+          type: ['ドラゴン', 'エスパー'],
+        },
+        {
+          name: 'ラティオス',
+          type: ['ドラゴン', 'エスパー'],
+        },
+        {
+          name: 'カイオーガ',
+          type: ['みず'],
+        },
+        {
+          name: 'グラードン',
+          type: ['じめん'],
+        },
+        {
+          name: 'レックウザ',
+          type: ['ドラゴン', 'ひこう'],
+        },
+        {
+          name: 'ユクシー',
+          type: ['エスパー', 'ふゆう'],
+        },
+        {
+          name: 'エムリット',
+          type: ['エスパー', 'ふゆう'],
+        },
+        {
+          name: 'アグノム',
+          type: ['エスパー', 'ふゆう'],
+        },
+        {
+          name: 'ディアルガ',
+          type: ['はがね', 'ドラゴン'],
+        },
+        {
+          name: 'パルキア',
+          type: ['みず', 'ドラゴン'],
+        },
+        {
+          name: 'ヒードラン',
+          type: ['ほのお', 'はがね', 'もらいび'],
+        },
+        {
+          name: 'ギラティナ',
+          type: ['ゴースト', 'ドラゴン'],
+        },
+        {
+          name: 'クレセリア',
+          type: ['エスパー', 'ふゆう'],
+        },
+        {
+          name: 'レシラム',
+          type: ['ドラゴン', 'ほのお'],
+        },
+        {
+          name: 'ゼクロム',
+          type: ['ドラゴン', 'でんき'],
+        },
+        {
+          name: 'キュレム',
+          type: ['ドラゴン', 'こおり'],
+        },
+        {
+          name: 'ゼルネアス',
+          type: ['フェアリー'],
+        },
+        {
+          name: 'イベルタル',
+          type: ['あく', 'ひこう'],
+        },
+        {
+          name: 'ジガルデ',
+          type: ['ドラゴン', 'じめん'],
+        },
+        {
+          name: 'カプ・コケコ',
+          type: ['でんき', 'フェアリー'],
+        },
+        {
+          name: 'カプ・テテフ',
+          type: ['エスパー', 'フェアリー'],
+        },
+        {
+          name: 'カプ・ブルル',
+          type: ['くさ', 'フェアリー'],
+        },
+        {
+          name: 'カプ・レヒレ',
+          type: ['みず', 'フェアリー'],
+        },
+        {
+          name: 'ソルガレオ',
+          type: ['エスパー', 'はがね'],
+        },
+        {
+          name: 'ルナアーラ',
+          type: ['エスパー', 'ゴースト'],
+        },
+        {
+          name: 'ウツロイド',
+          type: ['どく', 'いわ'],
+        },
+        {
+          name: 'マッシブーン',
+          type: ['かくとう', 'むし'],
+        },
+        {
+          name: 'フェローチェ',
+          type: ['かくとう', 'むし'],
+        },
+        {
+          name: 'デンジュモク',
+          type: ['でんき'],
+        },
+        {
+          name: 'テッカグヤ',
+          type: ['ひこう', 'はがね'],
+        },
+        {
+          name: 'カミツルギ',
+          type: ['くさ', 'はがね'],
+        },
+        {
+          name: 'アクジキング',
+          type: ['ドラゴン', 'あく'],
+        },
+        {
+          name: 'ネクロズマ',
+          type: ['エスパー'],
+        },
+        {
+          name: 'ツンデツンデ',
+          type: ['いわ', 'はがね'],
+        },
+        {
+          name: 'ズガドーン',
+          type: ['ほのお', 'ゴースト'],
+        },
+        {
+          name: 'トルネロス',
+          type: ['ひこう'],
+        },
+        {
+          name: 'ボルトロス',
+          type: ['でんき', 'ひこう'],
+        },
+        {
+          name: 'ランドロス',
+          type: ['じめん', 'ひこう'],
+        },
+      ];
+
+      function included(arr, val){
+        return !(arr.indexOf(val) < 0)
+      }
+
+      function uniq(arr){
+        let ret = [];
+        for (let i = 0; i < arr.length; i++){
+          if (!included(ret, arr[i])){
+            ret.push(arr[i]);
+          }
+        }
+        return ret;
+      }
+
+      function setTypeEffectMst(){
+        for (let i = 0; i < bossMst.length; i++){
+          let effect = calcTypeEffect(bossMst[i].type);
+          bossMst[i].weak = effect.weak;
+          bossMst[i].regist = effect.regist;
+          bossMst[i].noeffect = effect.noeffect;
+        }
+      }
+
+      function setCautionAttackMst(){
+        for (let i = 0; i < bossMst.length; i++){
+          bossMst[i].caution = calcCautionType(bossMst[i].type);
+        }
+      }
+
+      function getTypeInfo(v){
+        for (let i = 0; i < typeMst.length; i++){
+          if (typeMst[i].type === v){
+            return typeMst[i];
+          }
+        }
+        return null;
+      }
+
+      function calcTypeEffect(types){
+        let weak = [];
+        let regist = [];
+        let noeffect = [];
+        for (let i = 0; i < types.length; i++){
+          let typeInfo = getTypeInfo(types[i]);
+          if (!typeInfo){
+            continue;
+          }
+          // 弱点
+          let t_weaks = typeInfo.weak;
+          for (let j = 0; j < t_weaks.length; j++){
+            let w = t_weaks[j];
+            if (included(weak, w)){
+              // 4倍弱点は無視
+              continue;
+            }else if (included(regist, w)){
+              regist.splice(regist.indexOf(w), 1);
+            }else if (included(noeffect, w)){
+              continue;
+            }else{
+              weak.push(w);
+            }
+          }
+          // 抵抗
+          let t_regists = typeInfo.regist;
+          for (let j = 0; j < t_regists.length; j++){
+            let r = t_regists[j];
+            if (included(weak, r)){
+              weak.splice(weak.indexOf(r), 1);
+            }else if (included(regist, r)){
+              // 1/4抵抗は無視
+              continue;
+            }else if (included(noeffect, r)){
+              continue;
+            }else{
+              regist.push(r);
+            }
+          }
+          // 無効
+          let t_noeffects = typeInfo.noeffect;
+          for (let j = 0; j < t_noeffects.length; j++){
+            let n = t_noeffects[j];
+            if (included(weak, n)){
+              weak.splice(weak.indexOf(n), 1);
+            }else if (included(regist, n)){
+              regist.splice(regist.indexOf(n), 1);
+            }
+            if (!included(noeffect, n)){
+              noeffect.push(n);
+            }
+          }
+        }
+        return {
+          weak: weak,
+          regist: regist,
+          noeffect: noeffect,
+        };
+      }
+
+      function calcCautionType(types){
+        let ret = [];
+        for (let i = 0; i < typeMst.length; i++){
+          for (let j = 0; j < types.length; j++){
+            if (included(typeMst[i].weak, types[j]) && !included(ret, typeMst[i].type)){
+              ret.push(typeMst[i].type);
+            }
+          }
+        }
+        return ret;
+      }
+
+      function init(){
+        $("#targetType").empty();
+        for (let i = 0; i < typeMst.length; i++){
+          if (typeMst[i].notType){
+            continue;
+          }
+          let opt = $('<option>').attr('value', typeMst[i].type).append(typeMst[i].type);
+          $("#targetType").append(opt);
+        }
+        setTypeEffectMst();
+        setCautionAttackMst();
+      }
+
+      init();
+
+      unlock();
+
+      function lock(){
+        $("#lock").show();
+      }
+      function unlock(){
+        $("#lock").hide();
+      }
+
+      $("#start").on("click", function(){
+        lock();
+        
+        let targetType = $('#targetType').val();
+
+        $('#targetList').empty();
+        $('#weakList').empty();
+        $('#evenList').empty();
+        $('#cautionList').empty();
+        $('#targetList').empty();
+
+        let table = $('<table>');
+        let head = $('<tr>');
+        let weakList = [];
+        let registList = [];
+        let cautionList = [];
+        head.append($('<th>').append('ポケモン'));
+        head.append($('<th>').append('タイプ'));
+        head.append($('<th>').append('ばつぐん'));
+        head.append($('<th>').append('いまひとつ'));
+        head.append($('<th>').append('こうかなし'));
+        head.append($('<th>').append('弱点注意'));
+        table.append(head);
+        for (let i = 0; i < bossMst.length; i++){
+          if (bossMst[i].type.indexOf(targetType) < 0){
+            continue;
+          }
+          let tr = $('<tr>');
+          tr.append($('<td>').append(bossMst[i].name));
+          tr.append($('<td>').append(bossMst[i].type.join('/')));
+          tr.append($('<td>').append(bossMst[i].weak.join('/')));
+          tr.append($('<td>').append(bossMst[i].regist.join('/')));
+          tr.append($('<td>').append(bossMst[i].noeffect.join('/')));
+          tr.append($('<td>').append(bossMst[i].caution.join('/')));
+          table.append(tr);
+          weakList = weakList.concat(bossMst[i].weak);
+          registList = registList.concat(bossMst[i].regist);
+          registList = registList.concat(bossMst[i].noeffect);
+          cautionList = cautionList.concat(bossMst[i].caution);
+        }
+        weakList = uniq(weakList);
+        registList = uniq(registList);
+        cautionList = uniq(cautionList);
+        for (let i = 0; i < registList.length; i++){
+          if (included(weakList, registList[i])){
+            weakList.splice(weakList.indexOf(registList[i]), 1);
+          }
+        }
+        let cautionResultList = [];
+        for (let i = 0; i < weakList.length; i++){
+          if (included(cautionList, weakList[i])){
+            cautionResultList.push(weakList[i]);
+          }
+        }
+        let evenList = [];
+        for (let i = 0; i < typeMst.length; i++){
+          if (!included(registList, typeMst[i].type) && !included(weakList, typeMst[i].type)){
+            evenList.push(typeMst[i].type);
+          }
+        }
+        if (included(evenList, 'ふゆう')){
+          evenList.splice(evenList.indexOf('ふゆう'), 1);
+        }
+        if (included(evenList, 'もらいび')){
+          evenList.splice(evenList.indexOf('もらいび'), 1);
+        }
+        $('#weakList').append(weakList.join('/'));
+        $('#evenList').append(evenList.join('/'));
+        $('#cautionList').append(cautionResultList.join('/'));
+        $('#targetList').append(table);
+        unlock();
+      });
+    });
+  </script>
+</body>
+</html>
