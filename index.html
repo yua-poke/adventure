@@ -47,6 +47,7 @@
             <th>ばつぐん</th>
             <th>いまひとつ</th>
             <th>こうかなし</th>
+            <th>一致弱点技(受ける)</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -59,7 +60,7 @@
   <div id="lock" style="z-index:999;position:absolute;top:0px;left:0px;right:0px;bottom:0px;background-color:pink;opacity:0.3;text-align:center;font-size:xx-large;color:gray;">読み込み中...</div>
   <script>
     $( function() {
-      $('#typeTable').tablesorter({theme: 'blue', sortList: [[1,1], [2,1], [4,0], [3,0]]});
+      $('#typeTable').tablesorter({theme: 'blue', sortList: [[1,1], [5,0], [2,1], [4,0], [3,0]]});
       let typeMst = [
         {
           type: 'ノーマル',
@@ -560,6 +561,7 @@
             tr.append($('<td>').append(map[keys[i]].weak));
           tr.append($('<td>').append(map[keys[i]].regist));
           tr.append($('<td>').append(map[keys[i]].noeffect));
+          tr.append($('<td>').append(map[keys[i]].caution));
           body.append(tr);
         }
         $('#typeTable').append(body);
@@ -585,6 +587,7 @@
             weak: 0,
             regist: 0,
             noeffect: 0,
+            caution: 0,
           };
           typeCountMapping[typeMst[i].type] = obj;
         }
@@ -605,6 +608,7 @@
           registList = registList.concat(bossMst[i].noeffect);
           addMapCount(typeCountMapping, bossMst[i].noeffect, 'noeffect');
           cautionList = cautionList.concat(bossMst[i].caution);
+          addMapCount(typeCountMapping, bossMst[i].caution, 'caution');
         }
         weakList = uniq(weakList);
         registList = uniq(registList);
